@@ -9,10 +9,6 @@ echo "======================================"
 echo "🚀 Deploying Vehicle Tracking Dashboard"
 echo "======================================"
 
-# Get current directory
-CURRENT_DIR="$(pwd)"
-echo "📍 Running from: $CURRENT_DIR"
-
 # Update system
 echo "📦 Updating system packages..."
 sudo apt update
@@ -24,18 +20,20 @@ sudo apt install -y python3 python3-pip python3-venv nginx
 
 # Install Chrome and ChromeDriver for Selenium
 echo "🌐 Installing Google Chrome..."
-if ! command -v google-chrome &> /dev/null; then
-    wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-    sudo apt install -y ./google-chrome-stable_current_amd64.deb
-    rm google-chrome-stable_current_amd64.deb
-else
-    echo "Chrome already installed, skipping..."
-fi
+wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install -y ./google-chrome-stable_current_amd64.deb
+rm google-chrome-stable_current_amd64.deb
 
 echo "🔧 Installing ChromeDriver..."
 sudo apt install -y chromium-chromedriver
 
-# Create virtual environment in current directory
+# Create application directory
+APP_DIR="/home/ubuntu/sunny_bro"
+echo "📁 Setting up application directory at $APP_DIR..."
+mkdir -p $APP_DIR
+cd $APP_DIR
+
+# Create virtual environment
 echo "🐍 Creating Python virtual environment..."
 python3 -m venv venv
 source venv/bin/activate
@@ -43,15 +41,16 @@ source venv/bin/activate
 # Install Python dependencies
 echo "📦 Installing Python packages..."
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install flask gunicorn selenium requests
 
 # Set permissions
 echo "🔒 Setting permissions..."
-chmod -R 755 "$CURRENT_DIR"
+sudo chown -R ubuntu:www-data $APP_DIR
+chmod -R 755 $APP_DIR
 
 # Configure Nginx
 echo "🌐 Configuring Nginx..."
-sudo cp "$CURRENT_DIR/deploy/nginx.conf" /etc/nginx/sites-available/sunny_bro
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/sunny_bro
 sudo ln -sf /etc/nginx/sites-available/sunny_bro /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 
@@ -60,25 +59,7 @@ sudo nginx -t
 
 # Configure systemd service
 echo "⚙️ Setting up systemd service..."
-# Create custom service file with correct paths
-sudo bash -c "cat > /etc/systemd/system/sunny_bro.service << EOF
-[Unit]
-Description=Surat Municipal Vehicle Tracking Dashboard
-After=network.target
-
-[Service]
-User=root
-Group=root
-WorkingDirectory=$CURRENT_DIR
-Environment=\"PATH=$CURRENT_DIR/venv/bin\"
-ExecStart=$CURRENT_DIR/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5001 --timeout 300 wsgi:app
-
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF"
+sudo cp deploy/sunny_bro.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable sunny_bro
 sudo systemctl start sunny_bro

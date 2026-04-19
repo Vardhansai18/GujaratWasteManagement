@@ -90,38 +90,20 @@ def get_stats():
 @app.route('/api/refresh', methods=['POST'])
 def refresh_data():
     """Fetch latest data from API and update JSON file"""
-    driver = None
     try:
         print("\n🔄 Starting data refresh...")
         
-        # Test connectivity first
-        print("🔍 Testing connectivity to target website...")
-        test_response = requests.get("https://swm.suratmunicipal.org", timeout=10)
-        print(f"✅ Connectivity test passed (Status: {test_response.status_code})")
-        
-        # Launch browser with comprehensive options
+        # Launch browser
         options = webdriver.ChromeOptions()
-        options.add_argument("--headless=new")
+        options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--disable-extensions")
-        options.add_argument("--disable-setuid-sandbox")
-        options.add_argument("--remote-debugging-port=9222")
-        options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         
-        # Add service for better error handling
-        from selenium.webdriver.chrome.service import Service
-        service = Service('/usr/bin/chromedriver')
-        
-        driver = webdriver.Chrome(service=service, options=options)
-        driver.set_page_load_timeout(30)
+        driver = webdriver.Chrome(options=options)
         wait = WebDriverWait(driver, 20)
         
         # Open URL & Login
         url = "https://swm.suratmunicipal.org/Tracking/LiveTrackingO"
-        print(f"🌐 Navigating to {url}...")
         driver.get(url)
         
         # Fill username
@@ -205,41 +187,22 @@ def refresh_data():
                 'error': f'API returned status code {response.status_code}'
             }), 500
             
-    except requests.exceptions.ConnectionError as e:
-        print(f"❌ Network connectivity issue: {str(e)}")
-        if driver:
+    except Exception as e:
+        print(f"❌ Refresh failed: {str(e)}")
+        if 'driver' in locals():
             driver.quit()
         return jsonify({
             'success': False,
-            'error': 'Cannot connect to swm.suratmunicipal.org',
-            'details': 'The website is not accessible from this server. Please check:\n1. Network connectivity\n2. Firewall rules\n3. VPN requirements\n4. Website availability',
-            'suggestion': 'Try refreshing from a local machine with proper network access, or upload data manually.'
-        }), 503
-    except Exception as e:
-        error_msg = str(e)
-        print(f"❌ Refresh failed: {error_msg}")
-        if driver:
-            driver.quit()
-        
-        # Provide user-friendly error messages
-        if "ERR_CONNECTION_REFUSED" in error_msg or "Connection refused" in error_msg:
-            return jsonify({
-                'success': False,
-                'error': 'Connection Refused',
-                'details': 'Cannot connect to swm.suratmunicipal.org from this server. The website may be blocking connections from this IP address or require VPN access.',
-                'suggestion': 'Please run the refresh from a network that has access to the website, or contact your network administrator.'
-            }), 503
-        else:
-            return jsonify({
-                'success': False,
-                'error': error_msg
-            }), 500
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
+    # Support for cloud deployment (Render, Railway, etc.)
+    port = int(os.environ.get('PORT', 5001))
     print("=" * 60)
     print("🚛 Vehicle Tracking Dashboard")
     print("=" * 60)
-    print("Server starting at: http://10.197.36.30:80")
+    print(f"Server starting at: http://0.0.0.0:{port}")
     print("Press CTRL+C to stop")
     print("=" * 60)
-    app.run(debug=True, host='0.0.0.0', port=80)
+    app.run(debug=True, host='0.0.0.0', port=port)
