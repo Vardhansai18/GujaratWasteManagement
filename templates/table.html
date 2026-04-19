@@ -130,6 +130,13 @@
             font-size: 0.9em;
             color: #28a745;
             font-weight: 600;
+            max-width: 400px;
+            line-height: 1.4;
+        }
+
+        .refresh-status strong {
+            display: block;
+            margin-bottom: 4px;
         }
 
         @keyframes spin {
@@ -529,16 +536,23 @@
             refreshBtn.disabled = true;
             refreshIcon.classList.add('spinning');
             refreshText.textContent = 'Refreshing...';
-            refreshStatus.textContent = 'Fetching latest data from API...';
+            refreshStatus.textContent = 'Fetching latest data from API (this may take 30-60 seconds)...';
             refreshStatus.style.color = '#ffc107';
             
             try {
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+                
                 const response = await fetch('/api/refresh', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 const result = await response.json();
                 
@@ -549,18 +563,35 @@
                     // Reload the table with fresh data
                     await loadVehicles();
                     
-                    // Clear status after 5 seconds
+                    // Clear status after 10 seconds
                     setTimeout(() => {
                         refreshStatus.textContent = '';
-                    }, 5000);
+                    }, 10000);
                 } else {
-                    refreshStatus.textContent = `❌ Refresh failed: ${result.error}`;
+                    // Show detailed error message
+                    const errorMsg = result.details || result.error;
+                    refreshStatus.innerHTML = `❌ <strong>Refresh failed:</strong> ${errorMsg}`;
                     refreshStatus.style.color = '#dc3545';
+                    
+                    // Show for longer time on error
+                    setTimeout(() => {
+                        refreshStatus.textContent = '';
+                    }, 15000);
                 }
             } catch (error) {
                 console.error('Refresh error:', error);
-                refreshStatus.textContent = `❌ Error: ${error.message}`;
+                
+                if (error.name === 'AbortError') {
+                    refreshStatus.innerHTML = `❌ <strong>Timeout:</strong> Request took too long. The server may be having connectivity issues.`;
+                } else {
+                    refreshStatus.innerHTML = `❌ <strong>Error:</strong> ${error.message}`;
+                }
                 refreshStatus.style.color = '#dc3545';
+                
+                // Show for longer time on error
+                setTimeout(() => {
+                    refreshStatus.textContent = '';
+                }, 15000);
             } finally {
                 // Re-enable button and stop animation
                 refreshBtn.disabled = false;

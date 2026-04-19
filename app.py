@@ -90,20 +90,41 @@ def get_stats():
 @app.route('/api/refresh', methods=['POST'])
 def refresh_data():
     """Fetch latest data from API and update JSON file"""
+    driver = None
     try:
         print("\n🔄 Starting data refresh...")
         
-        # Launch browser
+        # Test connectivity first (quick fail if website is unreachable)
+        print("🔍 Testing connectivity...")
+        try:
+            test_conn = requests.get("https://swm.suratmunicipal.org", timeout=5)
+            print(f"✅ Connectivity OK (Status: {test_conn.status_code})")
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Cannot connect to website: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Cannot connect to swm.suratmunicipal.org',
+                'details': 'The website is not accessible from this server. Please check network connectivity or try again later.',
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+            }), 503
+        
+        # Launch browser with better options
+        print("🌐 Launching browser...")
         options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
+        options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-software-rasterizer")
+        options.page_load_strategy = 'normal'
         
         driver = webdriver.Chrome(options=options)
+        driver.set_page_load_timeout(30)
         wait = WebDriverWait(driver, 20)
         
         # Open URL & Login
         url = "https://swm.suratmunicipal.org/Tracking/LiveTrackingO"
+        print(f"📡 Navigating to {url}...")
         driver.get(url)
         
         # Fill username
@@ -187,14 +208,43 @@ def refresh_data():
                 'error': f'API returned status code {response.status_code}'
             }), 500
             
-    except Exception as e:
-        print(f"❌ Refresh failed: {str(e)}")
-        if 'driver' in locals():
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Network error: {str(e)}")
+        if driver:
             driver.quit()
         return jsonify({
             'success': False,
-            'error': str(e)
-        }), 500
+            'error': 'Network connectivity issue',
+            'details': 'Cannot reach swm.suratmunicipal.org. Please check your internet connection.',
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        }), 503
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Refresh failed: {error_msg}")
+        if driver:
+            driver.quit()
+        
+        # Provide user-friendly error messages
+        if "ERR_CONNECTION_REFUSED" in error_msg or "Connection refused" in error_msg:
+            return jsonify({
+                'success': False,
+                'error': 'Connection Refused',
+                'details': 'The website blocked the connection. This server may not have access to swm.suratmunicipal.org.',
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+            }), 503
+        elif "TimeoutException" in error_msg or "timeout" in error_msg.lower():
+            return jsonify({
+                'success': False,
+                'error': 'Request Timeout',
+                'details': 'The website took too long to respond. Please try again later.',
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+            }), 504
+        else:
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+            }), 500
 
 if __name__ == '__main__':
     # Support for cloud deployment (Render, Railway, etc.)
