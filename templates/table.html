@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Vehicles Table - Surat Municipal Corporation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .nav {
+            margin-top: 15px;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            margin: 0 5px;
+            transition: background 0.3s;
+        }
+
+        .nav a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .controls {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .controls-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-group select {
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+
+        .result-count {
+            font-weight: bold;
+            color: #667eea;
+            white-space: nowrap;
+        }
+
+        .refresh-btn {
+            padding: 12px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover {
+            background: #218838;
+        }
+
+        .refresh-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .refresh-status {
+            font-size: 0.9em;
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinning {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
+        .table-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+
+        thead {
+            background: #495057;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 14px 10px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+            border-right: 1px solid #6c757d;
+            cursor: pointer;
+            user-select: none;
+            background: #495057;
+        }
+
+        th:hover {
+            background: #5a6268;
+        }
+
+        th:last-child {
+            border-right: none;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #dee2e6;
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #e7f3ff;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        tbody tr:nth-child(even):hover {
+            background: #e7f3ff;
+        }
+
+        td {
+            padding: 12px 8px;
+            border-right: 1px solid #f0f0f0;
+        }
+
+        td:last-child {
+            border-right: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-idle {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-ngf {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .map-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .map-link:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 768px) {
+            .controls-inner {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚛 All Vehicles - Complete Table</h1>
+        <p>Surat Municipal Corporation - Waste Management</p>
+        <div class="nav">
+            <a href="/">🏠 Home</a>
+            <a href="/table">📋 Table View</a>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="controls-inner">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Search by RTO, ID, Location, Ward, Zone, Vendor..." onkeyup="filterTable()">
+            </div>
+            <div class="filter-group">
+                <label>Type:</label>
+                <select id="typeFilter" onchange="filterTable()">
+                    <option value="">All</option>
+                    <option value="DOOR TO DOOR">Door-to-Door</option>
+                    <option value="TEMPO - BOGCV">Tempo</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status:</label>
+                <select id="statusFilter" onchange="filterTable()">
+                    <option value="">All</option>
+                    <option value="running">Running</option>
+                    <option value="idle">Idle</option>
+                    <option value="ngf">No GPS</option>
+                </select>
+            </div>
+            <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+                <span id="refreshIcon">🔄</span>
+                <span id="refreshText">Refresh Data</span>
+            </button>
+            <div class="result-count" id="resultCount">Loading...</div>
+            <div class="refresh-status" id="refreshStatus"></div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="loading">🔄 Loading vehicle data...</div>
+        <table id="vehicleTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">No.</th>
+                    <th onclick="sortTable(1)">RTO Number ↕</th>
+                    <th onclick="sortTable(2)">Vehicle ID ↕</th>
+                    <th onclick="sortTable(3)">Type ↕</th>
+                    <th onclick="sortTable(4)">Model</th>
+                    <th onclick="sortTable(5)">Speed ↕</th>
+                    <th onclick="sortTable(6)">Status ↕</th>
+                    <th onclick="sortTable(7)">Ignition</th>
+                    <th onclick="sortTable(8)">Load</th>
+                    <th onclick="sortTable(9)">Location</th>
+                    <th onclick="sortTable(10)">Latitude</th>
+                    <th onclick="sortTable(11)">Longitude</th>
+                    <th>Map</th>
+                    <th onclick="sortTable(13)">Ward</th>
+                    <th onclick="sortTable(14)">Zone ↕</th>
+                    <th onclick="sortTable(15)">Vendor ↕</th>
+                    <th onclick="sortTable(16)">Driver</th>
+                    <th onclick="sortTable(17)">Odometer ↕</th>
+                    <th onclick="sortTable(18)">IMEI</th>
+                    <th onclick="sortTable(19)">Last Update</th>
+                </tr>
+            </thead>
+            <tbody id="vehicleTableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let allVehicles = [];
+        let sortDirection = {};
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadVehicles();
+        });
+
+        async function loadVehicles() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                // Load vehicle data
+                const vehicleResponse = await fetch('/api/search?q=');
+                
+                if (!vehicleResponse.ok) {
+                    // Fetch all vehicles by searching for common letter
+                    const allResponse = await fetch('/vechile_lat_lon.json');
+                    allVehicles = await allResponse.json();
+                } else {
+                    allVehicles = await vehicleResponse.json();
+                }
+
+                displayVehicles(allVehicles);
+                document.querySelector('.loading').style.display = 'none';
+                document.getElementById('vehicleTable').style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading vehicles:', error);
+                document.querySelector('.loading').innerHTML = '❌ Error loading data: ' + error.message;
+            }
+        }
+
+        function displayVehicles(vehicles) {
+            const tbody = document.getElementById('vehicleTableBody');
+            tbody.innerHTML = '';
+
+            if (!vehicles || vehicles.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="20" class="no-results">No vehicles found</td></tr>';
+                return;
+            }
+
+            vehicles.forEach((vehicle, index) => {
+                const speed = vehicle.VEHICLE_SPEED || 0;
+                const status = vehicle.VEHICLE_STATUS || 'N/A';
+
+                let statusClass = 'status-idle';
+                let statusText = 'IDLE';
+                let statusAttr = 'idle';
+
+                if (speed > 0) {
+                    statusClass = 'status-running';
+                    statusText = 'RUNNING';
+                    statusAttr = 'running';
+                } else if (status === 'NGF') {
+                    statusClass = 'status-ngf';
+                    statusText = 'NO GPS';
+                    statusAttr = 'ngf';
+                }
+
+                const lat = vehicle.VEHICLE_LATITUDE || '';
+                const lon = vehicle.VEHICLE_LONGITUDE || '';
+                const mapUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+
+                const row = document.createElement('tr');
+                row.setAttribute('data-type', vehicle.VEHICLE_TYPE || '');
+                row.setAttribute('data-status', statusAttr);
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${vehicle.VEHICLE_RTO_NO || 'N/A'}</strong></td>
+                    <td>${vehicle.VEHICLE_ID || 'N/A'}</td>
+                    <td>${vehicle.VEHICLE_TYPE || 'N/A'}</td>
+                    <td>${vehicle.VEHICLE_MODEL || 'N/A'}</td>
+                    <td><strong>${speed} km/h</strong></td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>${vehicle.ACIGNONOFF || 'N/A'}</td>
+                    <td>${vehicle.UNLOADED || 'N/A'}</td>
+                    <td style="max-width: 300px;">${vehicle.VEHICLE_LOCATION || 'N/A'}</td>
+                    <td>${lat}</td>
+                    <td>${lon}</td>
+                    <td><a href="${mapUrl}" target="_blank" class="map-link">📍 View</a></td>
+                    <td>${vehicle.WARD_NAME || 'N/A'}</td>
+                    <td>${vehicle.ZONE_NAME || 'N/A'}</td>
+                    <td>${vehicle.VENDOR_NAME || 'N/A'}</td>
+                    <td>${vehicle.DRIVER_NAME || 'N/A'}</td>
+                    <td>${vehicle.VEHICLE_ODOMETER || 'N/A'} km</td>
+                    <td>${vehicle.IMEI || 'N/A'}</td>
+                    <td>${vehicle.DCDATETIME || 'N/A'}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+
+            updateResultCount();
+        }
+
+        function filterTable() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const rows = document.querySelectorAll('#vehicleTableBody tr');
+
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const rowType = row.getAttribute('data-type');
+                const rowStatus = row.getAttribute('data-status');
+
+                let showRow = true;
+
+                if (searchInput && !text.includes(searchInput)) {
+                    showRow = false;
+                }
+
+                if (typeFilter && rowType !== typeFilter) {
+                    showRow = false;
+                }
+
+                if (statusFilter && rowStatus !== statusFilter) {
+                    showRow = false;
+                }
+
+                row.style.display = showRow ? '' : 'none';
+                if (showRow) visibleCount++;
+            });
+
+            document.getElementById('resultCount').textContent = 
+                `Showing ${visibleCount} of ${allVehicles.length} vehicles`;
+        }
+
+        function updateResultCount() {
+            const total = allVehicles.length;
+            document.getElementById('resultCount').textContent = `Total: ${total} vehicles`;
+        }
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById('vehicleTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+
+            const currentDirection = sortDirection[columnIndex] || 'asc';
+            const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            sortDirection[columnIndex] = newDirection;
+
+            rows.sort((a, b) => {
+                let aValue = a.cells[columnIndex].textContent.trim();
+                let bValue = b.cells[columnIndex].textContent.trim();
+
+                // Try to parse as number
+                const aNum = parseFloat(aValue);
+                const bNum = parseFloat(bValue);
+
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return newDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+
+                // String comparison
+                return newDirection === 'asc' 
+                    ? aValue.localeCompare(bValue)
+                    : bValue.localeCompare(aValue);
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        async function refreshData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const refreshIcon = document.getElementById('refreshIcon');
+            const refreshText = document.getElementById('refreshText');
+            const refreshStatus = document.getElementById('refreshStatus');
+            
+            // Disable button and show loading state
+            refreshBtn.disabled = true;
+            refreshIcon.classList.add('spinning');
+            refreshText.textContent = 'Refreshing...';
+            refreshStatus.textContent = 'Fetching latest data from API...';
+            refreshStatus.style.color = '#ffc107';
+            
+            try {
+                const response = await fetch('/api/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    refreshStatus.textContent = `✅ ${result.message} at ${result.timestamp}`;
+                    refreshStatus.style.color = '#28a745';
+                    
+                    // Reload the table with fresh data
+                    await loadVehicles();
+                    
+                    // Clear status after 5 seconds
+                    setTimeout(() => {
+                        refreshStatus.textContent = '';
+                    }, 5000);
+                } else {
+                    refreshStatus.textContent = `❌ Refresh failed: ${result.error}`;
+                    refreshStatus.style.color = '#dc3545';
+                }
+            } catch (error) {
+                console.error('Refresh error:', error);
+                refreshStatus.textContent = `❌ Error: ${error.message}`;
+                refreshStatus.style.color = '#dc3545';
+            } finally {
+                // Re-enable button and stop animation
+                refreshBtn.disabled = false;
+                refreshIcon.classList.remove('spinning');
+                refreshText.textContent = 'Refresh Data';
+            }
+        }
+    </script>
+</body>
+</html>

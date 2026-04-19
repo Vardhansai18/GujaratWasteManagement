@@ -1,0 +1,16 @@
+[Unit]
+Description=Surat Municipal Vehicle Tracking Dashboard
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/root/projects/GujaratWasteManagement
+Environment="PATH=/root/projects/GujaratWasteManagement/venv/bin"
+ExecStart=/root/projects/GujaratWasteManagement/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5001 --timeout 300 wsgi:app
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

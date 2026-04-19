@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Tracking Dashboard - Surat Municipal Corporation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .search-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1.1em;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-box button {
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .search-box button:hover {
+            background: #5568d3;
+        }
+
+        .results-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            display: none;
+        }
+
+        .results-section.visible {
+            display: block;
+        }
+
+        .vehicle-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .vehicle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .vehicle-header h2 {
+            color: #667eea;
+            font-size: 1.8em;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .status-badge.running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.idle {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-item {
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .detail-item label {
+            font-weight: bold;
+            color: #666;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .detail-item value {
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .map-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .map-link:hover {
+            background: #218838;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚛 Vehicle Tracking Dashboard</h1>
+            <p>Surat Municipal Corporation - Waste Management</p>
+        </div>
+
+        <div class="stats-container" id="statsContainer">
+            <div class="stat-card">
+                <h3 id="totalFleet">--</h3>
+                <p>Total Fleet</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="connectedFleet">--</h3>
+                <p>Connected</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="runningFleet">--</h3>
+                <p>Running</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="idleFleet">--</h3>
+                <p>Idle</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="disconnectedFleet">--</h3>
+                <p>Disconnected</p>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <h2 style="margin-bottom: 20px; color: #333;">🔍 Search Vehicle</h2>
+            <div style="margin-bottom: 20px;">
+                <a href="/table" style="display: inline-block; padding: 12px 24px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background 0.3s;">
+                    📋 View All Vehicles Table
+                </a>
+            </div>
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Enter Vehicle RTO No (e.g., GJ05GV2306) or Vehicle ID..."
+                    list="vehicleList"
+                >
+                <datalist id="vehicleList"></datalist>
+                <button onclick="searchVehicle()">Search</button>
+            </div>
+            <p style="color: #666; font-size: 0.9em;">💡 Tip: You can search by Vehicle RTO Number or Vehicle ID</p>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load statistics on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadVehicleList();
+        });
+
+        // Allow Enter key to search
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchVehicle();
+            }
+        });
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                document.getElementById('totalFleet').textContent = data.total_fleet || 0;
+                document.getElementById('connectedFleet').textContent = data.connected_fleet || 0;
+                document.getElementById('runningFleet').textContent = data.running_fleet || 0;
+                document.getElementById('idleFleet').textContent = data.idle_fleet || 0;
+                document.getElementById('disconnectedFleet').textContent = data.disconnected_fleet || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadVehicleList() {
+            try {
+                const response = await fetch('/api/vehicles');
+                const vehicles = await response.json();
+                
+                const datalist = document.getElementById('vehicleList');
+                vehicles.forEach(id => {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    datalist.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading vehicle list:', error);
+            }
+        }
+
+        async function searchVehicle() {
+            const searchInput = document.getElementById('searchInput');
+            const query = searchInput.value.trim();
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            if (!query) {
+                alert('Please enter a vehicle ID');
+                return;
+            }
+
+            // Show loading
+            resultsContainer.innerHTML = '<div class="loading">🔄 Searching...</div>';
+            resultsSection.classList.add('visible');
+
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                
+                if (response.ok) {
+                    const vehicles = await response.json();
+                    displayResults(vehicles);
+                } else {
+                    const error = await response.json();
+                    resultsContainer.innerHTML = `
+                        <div class="error-message">
+                            ❌ ${error.error || 'Vehicle not found'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsContainer.innerHTML = `
+                    <div class="error-message">
+                        ❌ Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function displayResults(vehicles) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            if (!Array.isArray(vehicles) || vehicles.length === 0) {
+                resultsContainer.innerHTML = '<div class="error-message">No vehicles found</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = vehicles.map(vehicle => {
+                const mapUrl = `https://www.google.com/maps?q=${vehicle.VEHICLE_LATITUDE},${vehicle.VEHICLE_LONGITUDE}`;
+                
+                let statusClass = 'idle';
+                let statusText = 'IDLE';
+                
+                if (vehicle.VEHICLE_SPEED > 0) {
+                    statusClass = 'running';
+                    statusText = 'RUNNING';
+                } else if (vehicle.VEHICLE_STATUS === 'NGF' || !vehicle.IS_TRACKED) {
+                    statusClass = 'disconnected';
+                    statusText = 'DISCONNECTED';
+                }
+
+                return `
+                    <div class="vehicle-card">
+                        <div class="vehicle-header">
+                            <h2>${vehicle.VEHICLE_RTO_NO}</h2>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <label>Vehicle ID</label>
+                                <value>${vehicle.VEHICLE_ID}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Vehicle Type</label>
+                                <value>${vehicle.VEHICLE_TYPE}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Model</label>
+                                <value>${vehicle.VEHICLE_MODEL}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Speed</label>
+                                <value>${vehicle.VEHICLE_SPEED} km/h</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Location</label>
+                                <value>${vehicle.VEHICLE_LOCATION}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Latitude</label>
+                                <value>${vehicle.VEHICLE_LATITUDE}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Longitude</label>
+                                <value>${vehicle.VEHICLE_LONGITUDE}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Ward</label>
+                                <value>${vehicle.WARD_NAME}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Zone</label>
+                                <value>${vehicle.ZONE_NAME}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Vendor</label>
+                                <value>${vehicle.VENDOR_NAME}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Driver</label>
+                                <value>${vehicle.DRIVER_NAME}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Odometer</label>
+                                <value>${vehicle.VEHICLE_ODOMETER} km</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Ignition</label>
+                                <value>${vehicle.ACIGNONOFF || 'N/A'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Load Status</label>
+                                <value>${vehicle.UNLOADED}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>IMEI</label>
+                                <value>${vehicle.IMEI}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>Last Update</label>
+                                <value>${vehicle.DCDATETIME}</value>
+                            </div>
+                        </div>
+                        
+                        <a href="${mapUrl}" target="_blank" class="map-link">
+                            📍 View on Google Maps
+                        </a>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
